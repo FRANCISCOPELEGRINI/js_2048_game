@@ -4,10 +4,19 @@ class Game {
     constructor(initialState) {
         this.size = 4;
         this.score = 0;
-        this.status = "playing"; // "playing", "won", "over"
-        this.board = initialState || this.createEmptyBoard();
-        this.addRandomCell();
-        this.addRandomCell();
+        this.status = "start"; // start, playing, win, lose
+
+        this._initialState = initialState ? this.cloneBoard(initialState) : this.createEmptyBoard();
+        this.board = this.cloneBoard(this._initialState);
+
+        if (!initialState) {
+            this.addRandomCell();
+            this.addRandomCell();
+        }
+    }
+
+    cloneBoard(board) {
+        return board.map(row => [...row]);
     }
 
     createEmptyBoard() {
@@ -15,7 +24,12 @@ class Game {
     }
 
     getState() {
-        return this.board.map(row => row.slice());
+        return this.board.map(row =>
+            row.map(value => ({
+                value,
+                className: value ? 'field-cell--' + value : ''
+            }))
+        );
     }
 
     getScore() {
@@ -26,16 +40,14 @@ class Game {
         return this.status;
     }
 
-    restart() {
-        this.score = 0;
+    start() {
         this.status = "playing";
-        this.board = this.createEmptyBoard();
-        this.addRandomCell();
-        this.addRandomCell();
     }
 
-    start() {
-        this.restart();
+    restart() {
+        this.score = 0;
+        this.status = "start";
+        this.board = this.cloneBoard(this._initialState);
     }
 
     moveLeft() {
@@ -83,6 +95,7 @@ class Game {
         }
 
         if (moved) this.addRandomCell();
+        if (this.status === "start") this.status = "playing";
         this.checkGameStatus();
         return moved;
     }
@@ -124,11 +137,11 @@ class Game {
 
     checkGameStatus() {
         if (this.board.flat().includes(2048)) {
-            this.status = "won";
+            this.status = "win";
             return;
         }
         if (!this.canMove()) {
-            this.status = "over";
+            this.status = "lose";
         }
     }
 
