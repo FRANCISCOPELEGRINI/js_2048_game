@@ -86,7 +86,7 @@ class Game {
     let moved = false;
 
     for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
-      let row = transformFn(this.board[rowIndex]);
+      const row = transformFn(this.board[rowIndex]);
       const { newRow, rowMoved, gainedScore } = this.mergeRow(row);
       if (reverse) newRow.reverse();
       if (rowMoved) moved = true;
