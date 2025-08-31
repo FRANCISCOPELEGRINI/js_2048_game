@@ -12,7 +12,7 @@ export class Game {
   }
 
   getEmptyBoard() {
-    return Array(4).fill(null).map(() => Array(4).fill(0));
+    return Array.from({ length: 4 }, () => Array(4).fill(0));
   }
 
   cloneBoard(board) {
@@ -32,10 +32,9 @@ export class Game {
   }
 
   start() {
-    if (this.status === 'playing') {
-      return;
+    if (this.status !== 'playing') {
+      this.restart();
     }
-    this.restart();
   }
 
   restart() {
@@ -66,13 +65,10 @@ export class Game {
 
   moveLeft() {
     const originalBoard = this.cloneBoard(this.board);
-    let moved = false;
-
     for (let r = 0; r < 4; r++) {
       let row = this.board[r].filter(cell => cell !== 0);
       let mergedRow = [];
       let i = 0;
-
       while (i < row.length) {
         if (i + 1 < row.length && row[i] === row[i + 1]) {
           const mergedValue = row[i] * 2;
@@ -84,16 +80,13 @@ export class Game {
           i++;
         }
       }
-
       while (mergedRow.length < 4) {
         mergedRow.push(0);
       }
-
       this.board[r] = mergedRow;
     }
 
-    moved = this.boardsAreDifferent(originalBoard, this.board);
-    if (moved) {
+    if (this.boardsAreDifferent(originalBoard, this.board)) {
       this.addRandomTile();
       this.checkGameStatus();
     }
@@ -101,9 +94,28 @@ export class Game {
 
   moveRight() {
     const originalBoard = this.cloneBoard(this.board);
-    this.board = this.board.map(row => this.moveRowRight(row));
-    const moved = this.boardsAreDifferent(originalBoard, this.board);
-    if (moved) {
+    for (let r = 0; r < 4; r++) {
+      let row = this.board[r].filter(cell => cell !== 0).reverse();
+      let mergedRow = [];
+      let i = 0;
+      while (i < row.length) {
+        if (i + 1 < row.length && row[i] === row[i + 1]) {
+          const mergedValue = row[i] * 2;
+          mergedRow.push(mergedValue);
+          this.score += mergedValue;
+          i += 2;
+        } else {
+          mergedRow.push(row[i]);
+          i++;
+        }
+      }
+      while (mergedRow.length < 4) {
+        mergedRow.push(0);
+      }
+      this.board[r] = mergedRow.reverse();
+    }
+
+    if (this.boardsAreDifferent(originalBoard, this.board)) {
       this.addRandomTile();
       this.checkGameStatus();
     }
@@ -114,8 +126,7 @@ export class Game {
     this.board = this.transposeBoard(this.board);
     this.moveLeft();
     this.board = this.transposeBoard(this.board);
-    const moved = this.boardsAreDifferent(originalBoard, this.board);
-    if (moved) {
+    if (this.boardsAreDifferent(originalBoard, this.board)) {
       this.checkGameStatus();
     }
   }
@@ -125,47 +136,18 @@ export class Game {
     this.board = this.transposeBoard(this.board);
     this.moveRight();
     this.board = this.transposeBoard(this.board);
-    const moved = this.boardsAreDifferent(originalBoard, this.board);
-    if (moved) {
+    if (this.boardsAreDifferent(originalBoard, this.board)) {
       this.checkGameStatus();
     }
   }
 
   // Métodos Auxiliares
-  moveRowRight(row) {
-    let newRow = row.filter(cell => cell !== 0).reverse();
-    let mergedRow = [];
-    let i = 0;
-    while (i < newRow.length) {
-      if (i + 1 < newRow.length && newRow[i] === newRow[i + 1]) {
-        const mergedValue = newRow[i] * 2;
-        mergedRow.push(mergedValue);
-        this.score += mergedValue;
-        i += 2;
-      } else {
-        mergedRow.push(newRow[i]);
-        i++;
-      }
-    }
-    while (mergedRow.length < 4) {
-      mergedRow.push(0);
-    }
-    return mergedRow.reverse();
-  }
-
   transposeBoard(board) {
     return board[0].map((_, colIndex) => board.map(row => row[colIndex]));
   }
 
   boardsAreDifferent(board1, board2) {
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (board1[r][c] !== board2[r][c]) {
-          return true;
-        }
-      }
-    }
-    return false;
+    return JSON.stringify(board1) !== JSON.stringify(board2);
   }
 
   isGameOver() {
@@ -180,18 +162,7 @@ export class Game {
   }
 
   checkGameStatus() {
-    let hasWon = false;
-    for (let r = 0; r < 4; r++) {
-      for (let c = 0; c < 4; c++) {
-        if (this.board[r][c] === 2048) {
-          hasWon = true;
-          break;
-        }
-      }
-      if (hasWon) break;
-    }
-
-    if (hasWon) {
+    if (this.board.some(row => row.includes(2048))) {
       this.status = 'win';
     } else if (this.isGameOver()) {
       this.status = 'game-over';
