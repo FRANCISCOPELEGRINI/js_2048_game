@@ -62,9 +62,9 @@ class Game {
 
     transpose() {
         const newBoard = this.createEmptyBoard();
-        for (let i = 0; i < this.size; i++) {
-            for (let j = 0; j < this.size; j++) {
-                newBoard[i][j] = this.board[j][i];
+        for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
+            for (let colIndex = 0; colIndex < this.size; colIndex++) {
+                newBoard[rowIndex][colIndex] = this.board[colIndex][rowIndex];
             }
         }
         this.board = newBoard;
@@ -73,12 +73,12 @@ class Game {
     move(transformFn, reverse = false) {
         let moved = false;
 
-        for (let i = 0; i < this.size; i++) {
-            let row = transformFn(this.board[i]);
+        for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
+            let row = transformFn(this.board[rowIndex]);
             let { newRow, rowMoved, gainedScore } = this.mergeRow(row);
             if (reverse) newRow.reverse();
             if (rowMoved) moved = true;
-            this.board[i] = newRow;
+            this.board[rowIndex] = newRow;
             this.score += gainedScore;
         }
 
@@ -110,15 +110,15 @@ class Game {
 
     addRandomCell() {
         const empty = [];
-        for (let i = 0; i < this.size; i++) {
-            for (let j = 0; j < this.size; j++) {
-                if (this.board[i][j] === 0) empty.push([i, j]);
+        for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
+            for (let colIndex = 0; colIndex < this.size; colIndex++) {
+                if (this.board[rowIndex][colIndex] === 0) empty.push([rowIndex, colIndex]);
             }
         }
         if (empty.length === 0) return false;
 
-        const [i, j] = empty[Math.floor(Math.random() * empty.length)];
-        this.board[i][j] = Math.random() < 0.1 ? 4 : 2;
+        const [r, c] = empty[Math.floor(Math.random() * empty.length)];
+        this.board[r][c] = Math.random() < 0.1 ? 4 : 2;
         return true;
     }
 
@@ -133,11 +133,11 @@ class Game {
     }
 
     canMove() {
-        for (let i = 0; i < this.size; i++) {
-            for (let j = 0; j < this.size; j++) {
-                if (this.board[i][j] === 0) return true;
-                if (j < this.size - 1 && this.board[i][j] === this.board[i][j + 1]) return true;
-                if (i < this.size - 1 && this.board[i][j] === this.board[i + 1][j]) return true;
+        for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
+            for (let colIndex = 0; colIndex < this.size; colIndex++) {
+                if (this.board[rowIndex][colIndex] === 0) return true;
+                if (colIndex < this.size - 1 && this.board[rowIndex][colIndex] === this.board[rowIndex][colIndex + 1]) return true;
+                if (rowIndex < this.size - 1 && this.board[rowIndex][colIndex] === this.board[rowIndex + 1][colIndex]) return true;
             }
         }
         return false;
@@ -145,4 +145,3 @@ class Game {
 }
 
 export default Game;
-
