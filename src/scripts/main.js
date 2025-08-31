@@ -1,13 +1,16 @@
 'use strict';
 
-class Game {
+function cloneBoard(board) {
+  return board.map(row => [...row]);
+}
+
+export default class Game {
   constructor(initialState) {
     this.size = 4;
     this.score = 0;
     this.status = 'start'; // start, playing, win, lose
-
-    this._initialState = initialState ? this.cloneBoard(initialState) : this.createEmptyBoard();
-    this.board = this.cloneBoard(this._initialState);
+    this._initialState = initialState ? cloneBoard(initialState) : null;
+    this.board = initialState ? cloneBoard(initialState) : this.createEmptyBoard();
 
     if (!initialState) {
       this.addRandomCell();
@@ -15,12 +18,22 @@ class Game {
     }
   }
 
-  cloneBoard(board) {
-    return board.map(row => [...row]);
-  }
-
   createEmptyBoard() {
     return Array.from({ length: this.size }, () => Array(this.size).fill(0));
+  }
+
+  start() {
+    if (this.status === 'start') this.status = 'playing';
+  }
+
+  restart() {
+    this.score = 0;
+    this.status = 'start';
+    this.board = this._initialState ? cloneBoard(this._initialState) : this.createEmptyBoard();
+    if (!this._initialState) {
+      this.addRandomCell();
+      this.addRandomCell();
+    }
   }
 
   getState() {
@@ -40,14 +53,16 @@ class Game {
     return this.status;
   }
 
-  start() {
-    this.status = 'playing';
-  }
+  addRandomCell() {
+    const emptyCells = [];
+    for (let i = 0; i < this.size; i++)
+      for (let j = 0; j < this.size; j++)
+        if (!this.board[i][j]) emptyCells.push([i, j]);
 
-  restart() {
-    this.score = 0;
-    this.status = 'start';
-    this.board = this.cloneBoard(this._initialState);
+    if (!emptyCells.length) return;
+
+    const [i, j] = emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    this.board[i][j] = Math.random() < 0.1 ? 4 : 2;
   }
 
   moveLeft() {
@@ -55,108 +70,146 @@ class Game {
   }
 
   moveRight() {
-    return this.move(row => row.slice().reverse(), true);
+    return this.move(row => row.slice().reverse(), row => row.reverse());
   }
 
   moveUp() {
-    this.transpose();
-    const moved = this.moveLeft();
-    this.transpose();
-    return moved;
+    return this.move(
+      null,
+      true
+    );
   }
 
   moveDown() {
-    this.transpose();
-    const moved = this.moveRight();
-    this.transpose();
+    return this.move(
+      null,
+      true,
+      row => row.slice().reverse(),
+      row => row.reverse()
+    );
+  }
+
+  move(transform = row => row, transpose = false, preReverse = null, postReverse = null) {
+    const oldBoard = cloneBoard(this.board);
+    const size = this.size;
+
+    const getCol = j => this.board.map(r => r[j]);
+    const setCol = (j, col) => col.forEach((v, i) => (this.board[i][j] = v));
+
+    for (let i = 0; i < size; i++) {
+      let row = transpose ? getCol(i) : this.board[i];
+      if (preReverse) row = preReverse(row);
+
+      row = transform(row);
+
+      let newRow = row.filter(v => v !== 0);
+      for (let j = 0; j < newRow.length - 1; j++) {
+        if (newRow[j] === newRow[j + 1]) {
+          newRow[j] *= 2;
+          this.score += newRow[j];
+          newRow[j + 1] = 0;
+          if (newRow[j] === 2048) this.status = 'win';
+        }
+      }
+      newRow = newRow.filter(v => v !== 0);
+      while (newRow.length < size) newRow.push(0);
+
+      if (postReverse) newRow = postReverse(newRow);
+      if (transpose) setCol(i, newRow);
+      else this.board[i] = newRow;
+    }
+
+    const moved = JSON.stringify(oldBoard) !== JSON.stringify(this.board);
+    if (moved) {
+      if (this.status === 'playing' || this.status === 'start') this.status = 'playing';
+      this.addRandomCell();
+      if (!this.canMove()) this.status = 'lose';
+    }
+
     return moved;
-  }
-
-  transpose() {
-    const newBoard = this.createEmptyBoard();
-    for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
-      for (let colIndex = 0; colIndex < this.size; colIndex++) {
-        newBoard[rowIndex][colIndex] = this.board[colIndex][rowIndex];
-      }
-    }
-    this.board = newBoard;
-  }
-
-  move(transformFn, reverse = false) {
-    let moved = false;
-
-    for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
-      const row = transformFn(this.board[rowIndex]);
-      const { newRow, rowMoved, gainedScore } = this.mergeRow(row);
-      if (reverse) newRow.reverse();
-      if (rowMoved) moved = true;
-      this.board[rowIndex] = newRow;
-      this.score += gainedScore;
-    }
-
-    if (moved) this.addRandomCell();
-    if (this.status === 'start') this.status = 'playing';
-    this.checkGameStatus();
-    return moved;
-  }
-
-  mergeRow(row) {
-    const newRow = row.filter(v => v !== 0);
-    let gainedScore = 0;
-    let rowMoved = false;
-
-    for (let i = 0; i < newRow.length - 1; i++) {
-      if (newRow[i] === newRow[i + 1]) {
-        newRow[i] *= 2;
-        gainedScore += newRow[i];
-        newRow[i + 1] = 0;
-        i++;
-      }
-    }
-
-    const finalRow = newRow.filter(v => v !== 0);
-    while (finalRow.length < this.size) finalRow.push(0);
-    if (finalRow.some((v, idx) => v !== row[idx])) rowMoved = true;
-
-    return { newRow: finalRow, rowMoved, gainedScore };
-  }
-
-  addRandomCell() {
-    const empty = [];
-    for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
-      for (let colIndex = 0; colIndex < this.size; colIndex++) {
-        if (this.board[rowIndex][colIndex] === 0) empty.push([rowIndex, colIndex]);
-      }
-    }
-    if (empty.length === 0) return false;
-
-    const [r, c] = empty[Math.floor(Math.random() * empty.length)];
-    this.board[r][c] = Math.random() < 0.1 ? 4 : 2;
-    return true;
-  }
-
-  checkGameStatus() {
-    if (this.board.flat().includes(2048)) {
-      this.status = 'win';
-      return;
-    }
-    if (!this.canMove()) {
-      this.status = 'lose';
-    }
   }
 
   canMove() {
-    for (let rowIndex = 0; rowIndex < this.size; rowIndex++) {
-      for (let colIndex = 0; colIndex < this.size; colIndex++) {
-        if (this.board[rowIndex][colIndex] === 0) return true;
-        if (colIndex < this.size - 1 && this.board[rowIndex][colIndex] === this.board[rowIndex][colIndex + 1]) return true;
-        if (rowIndex < this.size - 1 && this.board[rowIndex][colIndex] === this.board[rowIndex + 1][colIndex]) return true;
-      }
-    }
+    for (let i = 0; i < this.size; i++)
+      for (let j = 0; j < this.size; j++)
+        if (!this.board[i][j]) return true;
+
+    for (let i = 0; i < this.size; i++)
+      for (let j = 0; j < this.size - 1; j++)
+        if (this.board[i][j] === this.board[i][j + 1] || this.board[j][i] === this.board[j + 1][i])
+          return true;
+
     return false;
   }
 }
+import Game from '../modules/Game.class.js';
 
-export default Game;
+const game = new Game();
 
-//dsadsajf
+const boardContainer = document.querySelector('.game-board');
+const scoreContainer = document.querySelector('.score');
+const statusMessage = document.querySelector('.status-message');
+const startBtn = document.querySelector('.start-btn');
+
+function renderBoard() {
+  boardContainer.innerHTML = '';
+  const state = game.getState();
+  state.forEach(row => {
+    row.forEach(cell => {
+      const div = document.createElement('div');
+      div.classList.add('field-cell');
+      if (cell.className) div.classList.add(cell.className);
+      div.textContent = cell.value || '';
+      boardContainer.appendChild(div);
+    });
+  });
+  scoreContainer.textContent = game.getScore();
+  updateStatus();
+}
+
+function updateStatus() {
+  const status = game.getStatus();
+  if (status === 'start') {
+    statusMessage.textContent = 'Press Start to play!';
+    statusMessage.classList.remove('hidden');
+    startBtn.textContent = 'Start';
+  } else if (status === 'playing') {
+    statusMessage.classList.add('hidden');
+    startBtn.textContent = 'Restart';
+  } else if (status === 'win') {
+    statusMessage.textContent = 'You Win!';
+    statusMessage.classList.remove('hidden');
+  } else if (status === 'lose') {
+    statusMessage.textContent = 'Game Over!';
+    statusMessage.classList.remove('hidden');
+  }
+}
+
+function handleMove(event) {
+  let moved = false;
+  switch (event.key) {
+    case 'ArrowLeft':
+      moved = game.moveLeft();
+      break;
+    case 'ArrowRight':
+      moved = game.moveRight();
+      break;
+    case 'ArrowUp':
+      moved = game.moveUp();
+      break;
+    case 'ArrowDown':
+      moved = game.moveDown();
+      break;
+  }
+  if (moved) renderBoard();
+}
+
+startBtn.addEventListener('click', () => {
+  if (game.getStatus() === 'start') game.start();
+  else game.restart();
+  renderBoard();
+});
+
+document.addEventListener('keydown', handleMove);
+
+renderBoard();
