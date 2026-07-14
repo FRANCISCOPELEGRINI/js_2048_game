@@ -35,7 +35,14 @@ function genarateNumber(tabuleiro) {
   return tabuleiro;
 }
 class Game {
-  constructor(initialState) {
+  constructor(
+    initialState = [
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+      [0, 0, 0, 0],
+    ],
+  ) {
     this.tabuleiro = initialState.map((linha) => [...linha]);
     this.initialState = initialState.map((linha) => [...linha]);
     this.fusaoTabuleiro = fusaoTabuleiroDefault.map((linha) => [...linha]);
