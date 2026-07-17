@@ -44,7 +44,7 @@ class Game {
     ],
   ) {
     this.tabuleiro = initialState.map((linha) => [...linha]);
-    this.initialState = initialState.map((linha) => [...linha]);
+    this.initialState = JSON.parse(JSON.stringify(initialState));
     this.fusaoTabuleiro = fusaoTabuleiroDefault.map((linha) => [...linha]);
     this.soma = 0;
   }
@@ -226,7 +226,7 @@ class Game {
    * Resets the game.
    */
   restart() {
-    this.tabuleiro = this.initialState.map((linha) => [...linha]);
+    this.tabuleiro = JSON.parse(JSON.stringify(this.initialState));
     this.soma = 0;
     this.fusaoTabuleiro = fusaoTabuleiroDefault.map((linha) => [...linha]);
   }
